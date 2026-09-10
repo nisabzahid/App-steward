@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=App Steward
+Comment=Inspect, update, reinstall, and safely remove Linux software
+Exec=/usr/bin/installed-software
+Icon=io.github.installedsoftware.Manager
+Terminal=false
+Categories=System;Settings;PackageManager;
+Keywords=Applications;Software;Packages;Uninstall;APT;Flatpak;Snap;AppImage;
+StartupNotify=true
+DBusActivatable=false

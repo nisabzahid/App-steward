@@ -1,0 +1,11 @@
+Package: installed-software
+Version: 1.0.0
+Section: admin
+Priority: optional
+Architecture: all
+Maintainer: App Steward Contributors <maintainers@example.invalid>
+Depends: python3 (>= 3.12), python3-gi, python3-apt, gir1.2-gtk-4.0, pkexec, apt, dpkg
+Description: App Steward software inventory and package management utility
+ Aggregates Debian packages, Flatpak applications, Snap packages,
+ desktop entries and AppImages in a GTK4 desktop interface.
+ Removal operations are separately authorized and conservatively validated.

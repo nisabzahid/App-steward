@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">App Steward</title>
+  <desc id="desc">A friendly penguin holding a software package</desc>
+  <rect width="256" height="256" rx="48" fill="#14324a"/>
+  <circle cx="128" cy="117" r="91" fill="#1d5871"/>
+  <path fill="#101820" d="M72 91c0-35 24-58 56-58s56 23 56 58v65c0 37-23 65-56 65s-56-28-56-65z"/>
+  <ellipse cx="128" cy="150" rx="39" ry="57" fill="#f2f4f1"/>
+  <path fill="#101820" d="M79 132c-23 4-37 17-40 31 18 8 35 5 49-8zm98 0c23 4 37 17 40 31-18 8-35 5-49-8z"/>
+  <circle cx="106" cy="89" r="14" fill="#f2f4f1"/>
+  <circle cx="150" cy="89" r="14" fill="#f2f4f1"/>
+  <circle cx="106" cy="91" r="6" fill="#101820"/>
+  <circle cx="150" cy="91" r="6" fill="#101820"/>
+  <path fill="#f2a33a" d="m128 98 23 12-23 13-23-13z"/>
+  <path fill="#e88727" d="m105 110 23 13v14l-23-13z"/>
+  <path fill="#f5b84b" d="m151 110-23 13v14l23-13z"/>
+  <path fill="#f2a33a" d="M91 204c-14 6-25 15-30 27 19 8 37 3 48-10zm74 0c14 6 25 15 30 27-19 8-37 3-48-10z"/>
+  <g transform="translate(139 145)">
+    <path fill="#4cae75" d="m0 12 41-20 41 20-41 20z"/>
+    <path fill="#247a58" d="M0 12v43l41 21V32z"/>
+    <path fill="#359365" d="M82 12v43L41 76V32z"/>
+    <path fill="#e9f3ed" d="M41 19 70 5 82 12 41 32 0 12 12 5z"/>
+    <path fill="#247a58" d="M36 29h10v22H36z"/>
+    <path fill="#f2a33a" d="M41 37 52 43 41 49 30 43z"/>
+  </g>
+</svg>
