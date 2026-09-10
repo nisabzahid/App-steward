@@ -1,7 +1,19 @@
 # App Steward
 
-A native GTK4 application inventory and conservative package management utility for
-Ubuntu 24.04, Pop!_OS 24.04, and compatible Debian-package-based desktops.
+App Steward is a native GTK4 desktop utility for inspecting and managing
+installed applications on Ubuntu, Pop!_OS, and compatible Debian-based systems.
+It brings APT, Flatpak, Snap, desktop launchers, and selected AppImages into one
+clear inventory so users can understand what is installed and where it came from.
+
+App Steward focuses on deliberate, reviewable operations rather than blind
+cleanup. It shows the exact package-manager command before updating,
+reinstalling, or removing supported software, protects important system
+packages, and requires administrator authorization for privileged changes.
+
+The project is designed for local desktop use, transparent package operations,
+and maintainable open-source development. It does not claim to discover every
+script, container, language environment, or manually copied binary on a Linux
+system.
 
 ## What it does
 
