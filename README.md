@@ -20,7 +20,7 @@ Ubuntu 24.04, Pop!_OS 24.04, and compatible Debian-package-based desktops.
 - Removes supported applications after an explicit confirmation and plan review.
 - Reports partial discovery failures without discarding other backends.
 
-App Steward does not claim that Linux has a universal database of all installed software.
+App Steward does not claim that Linux has a universal database of every application.
 This application aggregates supported sources; it does not claim to identify
 every program, script, container, language environment, or manually copied binary.
 
