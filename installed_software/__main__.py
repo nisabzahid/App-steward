@@ -9,14 +9,17 @@ from pathlib import Path
 
 class JsonFormatter(logging.Formatter):
     def format(self, record):
-        return json.dumps({
-            "timestamp": datetime.fromtimestamp(
-                record.created, timezone.utc
-            ).isoformat(),
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "timestamp": datetime.fromtimestamp(
+                    record.created, timezone.utc
+                ).isoformat(),
+                "level": record.levelname,
+                "logger": record.name,
+                "message": record.getMessage(),
+            },
+            ensure_ascii=False,
+        )
 
 
 def configure_logging():
@@ -26,9 +29,10 @@ def configure_logging():
     console.setFormatter(JsonFormatter())
     root.addHandler(console)
 
-    state = Path(os.environ.get(
-        "XDG_STATE_HOME", str(Path.home() / ".local/state")
-    )) / "installed-software"
+    state = (
+        Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state")))
+        / "installed-software"
+    )
     try:
         state.mkdir(parents=True, exist_ok=True, mode=0o700)
         os.chmod(state, 0o700)
@@ -57,6 +61,7 @@ def main():
         return 1
     configure_logging()
     from .ui import ManagerApplication
+
     return ManagerApplication().run(sys.argv)
 
 

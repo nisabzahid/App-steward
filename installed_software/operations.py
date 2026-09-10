@@ -10,13 +10,9 @@ from .model import Application, Plan
 from .process import Runner
 
 INSTALLED_HELPER = Path("/usr/lib/installed-software/apt_helper.py")
-PACKAGE = re.compile(
-    r"[a-z0-9][a-z0-9+.-]+(?::[a-z0-9][a-z0-9-]*)?\Z"
-)
+PACKAGE = re.compile(r"[a-z0-9][a-z0-9+.-]+(?::[a-z0-9][a-z0-9-]*)?\Z")
 SNAP = re.compile(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:_[a-z0-9]+)?\Z")
-FLATPAK_ID = re.compile(
-    r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}\Z"
-)
+FLATPAK_ID = re.compile(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}\Z")
 REF_PART = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\Z")
 REMOTE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*\Z")
 
@@ -65,9 +61,7 @@ def check_helper_installation() -> None:
             raise PermissionError("APT helper installation is not root-owned and safe.")
 
 
-def check_appimage(
-    information: dict, delete: bool = False
-) -> None:
+def check_appimage(information: dict, delete: bool = False) -> None:
     """Validate using a directory fd; never follow a final-component symlink."""
     path = Path(information["path"])
     root = Path(information["root"])
@@ -80,9 +74,7 @@ def check_appimage(
     ):
         raise PermissionError("AppImage is outside its approved discovery root.")
 
-    parent_fd = os.open(
-        path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-    )
+    parent_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
         parent = os.fstat(parent_fd)
         if (
@@ -105,12 +97,12 @@ def check_appimage(
                 or info.st_nlink != 1
                 or fingerprint(info) != information["fingerprint"]
             ):
-                raise PermissionError("AppImage changed, is linked, or is not user-owned.")
+                raise PermissionError(
+                    "AppImage changed, is linked, or is not user-owned."
+                )
             if not appimage_signature(os.read(descriptor, 11)):
                 raise PermissionError("The file is not a recognized AppImage.")
-            current = os.stat(
-                path.name, dir_fd=parent_fd, follow_symlinks=False
-            )
+            current = os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)
             if fingerprint(current) != fingerprint(info):
                 raise PermissionError("AppImage changed during validation.")
             if delete:
@@ -135,15 +127,22 @@ class OperationService:
         if kind == "APT":
             name = validate_package(application.package_name)
             check_helper_installation()
-            output = self.runner.run([
-                "/usr/bin/python3", "-I", str(INSTALLED_HELPER),
-                "--plan", name,
-            ])
+            output = self.runner.run(
+                [
+                    "/usr/bin/python3",
+                    "-I",
+                    str(INSTALLED_HELPER),
+                    "--plan",
+                    name,
+                ]
+            )
             data = json.loads(output)
             argv = [
                 self.runner.executable("pkexec"),
                 str(INSTALLED_HELPER),
-                "--apply", name, data["digest"],
+                "--apply",
+                name,
+                data["digest"],
             ]
             explanation = (
                 f"Remove exactly: {name}\n"
@@ -162,8 +161,11 @@ class OperationService:
             argv = [
                 self.runner.executable("flatpak"),
                 *flags,
-                "uninstall", "--noninteractive", "--assumeyes",
-                "--no-related", ref,
+                "uninstall",
+                "--noninteractive",
+                "--assumeyes",
+                "--no-related",
+                ref,
             ]
             explanation = (
                 f"Remove application reference:\n{ref}\n"
@@ -183,7 +185,9 @@ class OperationService:
                 raise ValueError("Invalid Snap instance name.")
             argv = [
                 self.runner.executable("pkexec"),
-                self.runner.executable("snap"), "remove", name,
+                self.runner.executable("snap"),
+                "remove",
+                name,
             ]
             explanation = (
                 f"Remove Snap instance: {name}\n\n"
@@ -224,7 +228,9 @@ class OperationService:
 
     def update_plan(self, application: Application) -> Plan:
         if not application.can_update:
-            raise PermissionError("No update is currently available for this application.")
+            raise PermissionError(
+                "No update is currently available for this application."
+            )
         kind = application.installation_type
 
         if kind == "APT":
@@ -232,14 +238,18 @@ class OperationService:
             argv = [
                 self.runner.executable("pkexec"),
                 self.runner.executable("apt-get"),
-                "install", "--only-upgrade", "--no-remove", "--assume-yes",
+                "install",
+                "--only-upgrade",
+                "--no-remove",
+                "--assume-yes",
                 name,
             ]
             explanation = (
                 f"Update exactly: {name}\n"
                 f"Installed version: {application.version}\n"
                 f"Available version: {application.update_version}\n\n"
-                "APT will not remove packages. Administrator authentication is required."
+                "APT will not remove packages. Administrator authentication "
+                "is required."
             )
         elif kind == "Flatpak":
             flags = flatpak_flags(application.metadata["scope"])
@@ -247,8 +257,12 @@ class OperationService:
                 application.metadata["ref"], application.package_name
             )
             argv = [
-                self.runner.executable("flatpak"), *flags,
-                "update", "--noninteractive", "--assumeyes", ref,
+                self.runner.executable("flatpak"),
+                *flags,
+                "update",
+                "--noninteractive",
+                "--assumeyes",
+                ref,
             ]
             explanation = (
                 f"Update application reference:\n{ref}\n"
@@ -264,9 +278,14 @@ class OperationService:
                 raise ValueError("Invalid Snap instance name.")
             argv = [
                 self.runner.executable("pkexec"),
-                self.runner.executable("snap"), "refresh", name,
+                self.runner.executable("snap"),
+                "refresh",
+                name,
             ]
-            explanation = f"Update Snap instance: {name}\n\nAdministrator authentication is required."
+            explanation = (
+                f"Update Snap instance: {name}\n\n"
+                "Administrator authentication is required."
+            )
         else:
             raise PermissionError("This application cannot be updated automatically.")
 
@@ -297,12 +316,17 @@ class OperationService:
             argv = [
                 self.runner.executable("pkexec"),
                 self.runner.executable("apt-get"),
-                "install", "--reinstall", "--no-remove", "--assume-yes", name,
+                "install",
+                "--reinstall",
+                "--no-remove",
+                "--assume-yes",
+                name,
             ]
             explanation = (
                 f"Reinstall exactly: {name}\n"
                 "Source: configured APT repositories\n\n"
-                "APT will not remove packages. Administrator authentication is required."
+                "APT will not remove packages. Administrator authentication "
+                "is required."
             )
         elif kind == "Flatpak":
             flags = flatpak_flags(application.metadata["scope"])
@@ -312,9 +336,14 @@ class OperationService:
             if not REMOTE.fullmatch(origin):
                 raise ValueError("Invalid Flatpak remote name.")
             argv = [
-                self.runner.executable("flatpak"), *flags,
-                "install", "--reinstall", "--noninteractive", "--assumeyes",
-                origin, ref,
+                self.runner.executable("flatpak"),
+                *flags,
+                "install",
+                "--reinstall",
+                "--noninteractive",
+                "--assumeyes",
+                origin,
+                ref,
             ]
             explanation = (
                 f"Reinstall application reference:\n{ref}\n"
@@ -331,11 +360,20 @@ class OperationService:
                 raise ValueError("Invalid Snap instance name.")
             argv = [
                 self.runner.executable("pkexec"),
-                self.runner.executable("snap"), "refresh", "--amend", name,
+                self.runner.executable("snap"),
+                "refresh",
+                "--amend",
+                name,
             ]
-            explanation = f"Reinstall Snap instance: {name}\nSource: Snap Store\n\nAdministrator authentication is required."
+            explanation = (
+                f"Reinstall Snap instance: {name}\n"
+                "Source: Snap Store\n\n"
+                "Administrator authentication is required."
+            )
         else:
-            raise PermissionError("This application cannot be reinstalled automatically.")
+            raise PermissionError(
+                "This application cannot be reinstalled automatically."
+            )
 
         return Plan(
             application.id,

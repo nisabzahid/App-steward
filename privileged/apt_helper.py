@@ -7,20 +7,37 @@ import stat
 import sys
 from pathlib import Path
 
-PACKAGE = re.compile(
-    r"[a-z0-9][a-z0-9+.-]+(?::[a-z0-9][a-z0-9-]*)?\Z"
-)
+PACKAGE = re.compile(r"[a-z0-9][a-z0-9+.-]+(?::[a-z0-9][a-z0-9-]*)?\Z")
 PROTECTED_NAMES = {
-    "apt", "dpkg", "sudo", "pkexec", "polkitd", "systemd",
-    "systemd-sysv", "dbus", "dbus-user-session",
-    "ubuntu-desktop", "ubuntu-desktop-minimal",
-    "pop-desktop", "pop-session", "pop-default-settings",
-    "cosmic-session", "cosmic-desktop", "gnome-shell",
-    "gdm3", "network-manager", "installed-software",
+    "apt",
+    "dpkg",
+    "sudo",
+    "pkexec",
+    "polkitd",
+    "systemd",
+    "systemd-sysv",
+    "dbus",
+    "dbus-user-session",
+    "ubuntu-desktop",
+    "ubuntu-desktop-minimal",
+    "pop-desktop",
+    "pop-session",
+    "pop-default-settings",
+    "cosmic-session",
+    "cosmic-desktop",
+    "gnome-shell",
+    "gdm3",
+    "network-manager",
+    "installed-software",
 }
 PROTECTED_PREFIXES = (
-    "linux-image-", "linux-modules-", "linux-generic",
-    "linux-system76", "grub-", "shim-", "system76-",
+    "linux-image-",
+    "linux-modules-",
+    "linux-generic",
+    "linux-system76",
+    "grub-",
+    "shim-",
+    "system76-",
 )
 
 
@@ -49,9 +66,7 @@ def trusted_installation() -> None:
     for item in (path, *path.parents):
         info = item.stat()
         if info.st_uid != 0 or info.st_mode & 0o022:
-            raise PermissionError(
-                f"Unsafe helper installation permissions: {item}"
-            )
+            raise PermissionError(f"Unsafe helper installation permissions: {item}")
     if not stat.S_ISREG(path.stat().st_mode):
         raise PermissionError("Helper is not a regular file.")
 
@@ -105,9 +120,9 @@ def create_plan(cache, name: str) -> dict:
         "autoremove": False,
         "installed_size": installed.installed_size,
     }
-    canonical = json.dumps(
-        document, sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")
+    canonical = json.dumps(document, sort_keys=True, separators=(",", ":")).encode(
+        "utf-8"
+    )
     document["digest"] = hashlib.sha256(canonical).hexdigest()
     return document
 
@@ -119,9 +134,9 @@ def main() -> int:
     validate_package(name)
 
     import apt
-    import apt_pkg
     import apt.progress.base
     import apt.progress.text
+    import apt_pkg
 
     if mode == "--plan" and len(sys.argv) == 3:
         cache = apt.Cache()

@@ -13,25 +13,25 @@ class CommandError(RuntimeError):
 
 def command_environment() -> dict[str, str]:
     environment = os.environ.copy()
-    environment.update({
-        "LC_ALL": "C",
-        "LANG": "C",
-        "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
-        "DEBIAN_FRONTEND": "noninteractive",
-    })
+    environment.update(
+        {
+            "LC_ALL": "C",
+            "LANG": "C",
+            "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
+            "DEBIAN_FRONTEND": "noninteractive",
+        }
+    )
     return environment
 
 
 class Runner:
     def available(self, executable: str) -> bool:
-        return shutil.which(
-            executable, path="/usr/sbin:/usr/bin:/sbin:/bin"
-        ) is not None
+        return (
+            shutil.which(executable, path="/usr/sbin:/usr/bin:/sbin:/bin") is not None
+        )
 
     def executable(self, name: str) -> str:
-        result = shutil.which(
-            name, path="/usr/sbin:/usr/bin:/sbin:/bin"
-        )
+        result = shutil.which(name, path="/usr/sbin:/usr/bin:/sbin:/bin")
         if not result:
             raise CommandError(f"{name} is not installed.")
         return result

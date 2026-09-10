@@ -33,9 +33,7 @@ class DesktopEntry:
 
 
 def unescape(value: str) -> str:
-    replacements = {
-        "s": " ", "n": "\n", "t": "\t", "r": "\r", "\\": "\\"
-    }
+    replacements = {"s": " ", "n": "\n", "t": "\t", "r": "\r", "\\": "\\"}
     result = []
     index = 0
     while index < len(value):
@@ -78,7 +76,10 @@ def parse_desktop(path: Path, desktop_id: str) -> DesktopEntry | None:
     section = parser["Desktop Entry"]
     if section.get("Type", "Application") != "Application":
         return None
-    boolean = lambda key: section.get(key, "").casefold() == "true"
+
+    def boolean(key):
+        return section.get(key, "").casefold() == "true"
+
     return DesktopEntry(
         id=desktop_id,
         path=str(path),
@@ -97,9 +98,7 @@ def parse_desktop(path: Path, desktop_id: str) -> DesktopEntry | None:
 
 def desktop_directories() -> list[Path]:
     home = Path.home()
-    user_data = Path(os.environ.get(
-        "XDG_DATA_HOME", str(home / ".local/share")
-    ))
+    user_data = Path(os.environ.get("XDG_DATA_HOME", str(home / ".local/share")))
     directories = [user_data / "applications"]
     directories.extend(
         Path(item) / "applications"
@@ -108,11 +107,13 @@ def desktop_directories() -> list[Path]:
         ).split(":")
         if item and Path(item).is_absolute()
     )
-    directories.extend([
-        Path("/usr/local/share/applications"),
-        Path("/usr/share/applications"),
-        Path("/var/lib/snapd/desktop/applications"),
-    ])
+    directories.extend(
+        [
+            Path("/usr/local/share/applications"),
+            Path("/usr/share/applications"),
+            Path("/var/lib/snapd/desktop/applications"),
+        ]
+    )
     for _, _, location in flatpak_installations():
         if location:
             directories.append(Path(location) / "exports/share/applications")
@@ -133,9 +134,7 @@ def scan_desktops(
     entries = []
     notices = []
     seen_ids = set()
-    for directory in (
-        directories if directories is not None else desktop_directories()
-    ):
+    for directory in directories if directories is not None else desktop_directories():
         if not directory.is_dir():
             continue
         try:
@@ -162,27 +161,25 @@ def scan_desktops(
     return entries, notices
 
 
-def dpkg_owners(
-    entries: list[DesktopEntry], runner: Runner
-) -> dict[str, list[str]]:
+def dpkg_owners(entries: list[DesktopEntry], runner: Runner) -> dict[str, list[str]]:
     if not runner.available("dpkg-query"):
         return {}
     paths = [entry.path for entry in entries]
     requested = set(paths)
     owners: dict[str, list[str]] = {}
     for start in range(0, len(paths), 100):
-        batch = paths[start:start + 100]
+        batch = paths[start : start + 100]
         patterns = [
             "".join(
-                {"*": "[*]", "?": "[?]", "[": "[[]"}.get(char, char)
-                for char in path
+                {"*": "[*]", "?": "[?]", "[": "[[]"}.get(char, char) for char in path
             )
             for path in batch
         ]
         try:
-            output = runner.run([
-                runner.executable("dpkg-query"), "--search", *patterns
-            ], accepted=(0, 1))
+            output = runner.run(
+                [runner.executable("dpkg-query"), "--search", *patterns],
+                accepted=(0, 1),
+            )
             for line in output.splitlines():
                 if ": " not in line:
                     continue
@@ -214,7 +211,8 @@ def merge_applications(
         if application.installation_type == "APT"
     }
     flatpaks = [
-        application for application in applications
+        application
+        for application in applications
         if application.installation_type == "Flatpak"
     ]
     snaps = {
@@ -237,8 +235,7 @@ def merge_applications(
             match = apt.get(package)
             if match is None:
                 possibilities = [
-                    value for key, value in apt.items()
-                    if key.split(":")[0] == package
+                    value for key, value in apt.items() if key.split(":")[0] == package
                 ]
                 if len(possibilities) == 1:
                     match = possibilities[0]
@@ -247,15 +244,15 @@ def merge_applications(
 
         if match is None and entry.flatpak:
             possibilities = [
-                application for application in flatpaks
+                application
+                for application in flatpaks
                 if application.package_name == entry.flatpak
             ]
             scoped = [
-                application for application in possibilities
+                application
+                for application in possibilities
                 if application.install_location
-                and Path(entry.path).is_relative_to(
-                    Path(application.install_location)
-                )
+                and Path(entry.path).is_relative_to(Path(application.install_location))
             ]
             if len(scoped) == 1:
                 match = scoped[0]
@@ -273,9 +270,7 @@ def merge_applications(
         if match:
             first_visible = not match.metadata.get("visible_desktop_attached")
             match.desktop_files.append(entry.path)
-            match.metadata.setdefault("desktop_entries", []).append(
-                vars(entry).copy()
-            )
+            match.metadata.setdefault("desktop_entries", []).append(vars(entry).copy())
             if entry.visible:
                 match.desktop_application = True
                 match.system_package = False
@@ -289,26 +284,28 @@ def merge_applications(
                     match.metadata["visible_desktop_attached"] = True
             continue
 
-        result.append(Application(
-            id=f"desktop:{entry.id}",
-            name=entry.name,
-            installation_type="DesktopEntry",
-            description=entry.comment,
-            icon=entry.icon or "application-x-executable",
-            install_location=entry.path,
-            desktop_files=[entry.path],
-            desktop_application=entry.visible,
-            system_package=not entry.visible,
-            category=entry.categories,
-            source="Desktop entry; package ownership not established",
-            can_uninstall=False,
-            metadata={
-                "desktop_entries": [vars(entry).copy()],
-                "removal_note": (
-                    "Removing a launcher does not uninstall its application. "
-                    "Use the original installer or administrator instructions."
-                ),
-            },
-        ))
+        result.append(
+            Application(
+                id=f"desktop:{entry.id}",
+                name=entry.name,
+                installation_type="DesktopEntry",
+                description=entry.comment,
+                icon=entry.icon or "application-x-executable",
+                install_location=entry.path,
+                desktop_files=[entry.path],
+                desktop_application=entry.visible,
+                system_package=not entry.visible,
+                category=entry.categories,
+                source="Desktop entry; package ownership not established",
+                can_uninstall=False,
+                metadata={
+                    "desktop_entries": [vars(entry).copy()],
+                    "removal_note": (
+                        "Removing a launcher does not uninstall its application. "
+                        "Use the original installer or administrator instructions."
+                    ),
+                },
+            )
+        )
 
     return list({application.id: application for application in result}.values())

@@ -1,10 +1,8 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from .backends import (
-    AptBackend, FlatpakBackend, SnapBackend, AppImageBackend
-)
-from .desktop import scan_desktops, dpkg_owners, merge_applications
+from .backends import AppImageBackend, AptBackend, FlatpakBackend, SnapBackend
+from .desktop import dpkg_owners, merge_applications, scan_desktops
 from .model import DiscoveryResult
 from .process import Runner
 
@@ -38,7 +36,8 @@ class DiscoveryService:
                     result.notices.extend(discovered.notices)
                     LOG.info(
                         "discovery_finished backend=%s count=%d",
-                        key, len(discovered.applications),
+                        key,
+                        len(discovered.applications),
                     )
                 except Exception as error:
                     LOG.warning("discovery_failed backend=%s error=%s", key, error)
@@ -52,10 +51,6 @@ class DiscoveryService:
                 result.notices.append(f"Desktop entries: {error}")
 
         owners = dpkg_owners(entries, self.runner)
-        result.applications = merge_applications(
-            result.applications, entries, owners
-        )
-        LOG.info(
-            "deduplication_finished count=%d", len(result.applications)
-        )
+        result.applications = merge_applications(result.applications, entries, owners)
+        LOG.info("deduplication_finished count=%d", len(result.applications))
         return result

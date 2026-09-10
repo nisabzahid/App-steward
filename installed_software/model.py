@@ -26,14 +26,16 @@ class Application:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def search_text(self) -> str:
-        return " ".join((
-            self.name,
-            self.package_name,
-            self.description,
-            self.publisher,
-            self.installation_type,
-            self.source,
-        )).casefold()
+        return " ".join(
+            (
+                self.name,
+                self.package_name,
+                self.description,
+                self.publisher,
+                self.installation_type,
+                self.source,
+            )
+        ).casefold()
 
 
 @dataclass
@@ -74,7 +76,6 @@ def fuzzy_match(query: str, application: Application) -> bool:
         if len(term) < 3:
             return False
         iterator = iter(short)
-        return all(any(char == candidate for candidate in iterator)
-                   for char in term)
+        return all(any(char == candidate for candidate in iterator) for char in term)
 
     return all(matches(term) for term in terms)

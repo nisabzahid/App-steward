@@ -1,23 +1,34 @@
 import importlib.util
 import json
-import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 from installed_software.backends import (
-    AptBackend, FlatpakBackend, SnapBackend, AppImageBackend,
-    parse_dpkg, parse_flatpak, parse_snap, parse_size,
+    AppImageBackend,
+    AptBackend,
+    FlatpakBackend,
+    SnapBackend,
+    parse_dpkg,
+    parse_flatpak,
+    parse_size,
+    parse_snap,
 )
 from installed_software.desktop import (
-    DesktopEntry, parse_desktop, scan_desktops, merge_applications,
+    DesktopEntry,
+    merge_applications,
+    parse_desktop,
+    scan_desktops,
 )
 from installed_software.discovery import DiscoveryService
 from installed_software.model import Application, Plan, fuzzy_match
 from installed_software.operations import (
-    OperationService, validate_package, validate_flatpak_ref,
-    flatpak_flags, check_appimage,
+    OperationService,
+    check_appimage,
+    flatpak_flags,
+    validate_flatpak_ref,
+    validate_package,
 )
 from installed_software.process import CommandError, Runner
 
@@ -51,9 +62,18 @@ class FakeRunner:
 
 def desktop(path="/usr/share/applications/editor.desktop"):
     return DesktopEntry(
-        "editor.desktop", path, "Editor", "Edit documents",
-        "accessories-text-editor", "/usr/bin/editor %U",
-        "Utility;", False, False, False, "", "",
+        "editor.desktop",
+        path,
+        "Editor",
+        "Edit documents",
+        "accessories-text-editor",
+        "/usr/bin/editor %U",
+        "Utility;",
+        False,
+        False,
+        False,
+        "",
+        "",
     )
 
 
@@ -114,7 +134,11 @@ class ParsingTests(unittest.TestCase):
 
     def test_unavailable_backends(self):
         runner = FakeRunner(available=False)
-        for backend in (AptBackend(runner), FlatpakBackend(runner), SnapBackend(runner)):
+        for backend in (
+            AptBackend(runner),
+            FlatpakBackend(runner),
+            SnapBackend(runner),
+        ):
             result = backend.discover()
             self.assertEqual(result.applications, [])
             self.assertTrue(result.notices)
@@ -123,15 +147,14 @@ class ParsingTests(unittest.TestCase):
     def test_command_failure_isolated(self):
         service = DiscoveryService(FakeRunner(failure=True))
         service.backends = [SnapBackend(service.runner)]
-        with patch(
-            "installed_software.discovery.scan_desktops", return_value=([], [])
-        ):
+        with patch("installed_software.discovery.scan_desktops", return_value=([], [])):
             result = service.discover()
         self.assertEqual(result.applications, [])
         self.assertTrue(result.notices)
 
     def test_runner_timeout(self):
         import subprocess
+
         with patch(
             "subprocess.run",
             side_effect=subprocess.TimeoutExpired(["query"], 1),
@@ -141,6 +164,7 @@ class ParsingTests(unittest.TestCase):
 
     def test_runner_failure(self):
         import subprocess
+
         completed = subprocess.CompletedProcess(["x"], 7, "", "locked")
         with patch("subprocess.run", return_value=completed):
             with self.assertRaisesRegex(CommandError, "locked"):
@@ -171,12 +195,8 @@ class DesktopTests(unittest.TestCase):
             user, system = root / "user", root / "system"
             user.mkdir()
             system.mkdir()
-            (user / "x.desktop").write_text(
-                "[Desktop Entry]\nName=X\nHidden=true\n"
-            )
-            (system / "x.desktop").write_text(
-                "[Desktop Entry]\nName=System X\n"
-            )
+            (user / "x.desktop").write_text("[Desktop Entry]\nName=X\nHidden=true\n")
+            (system / "x.desktop").write_text("[Desktop Entry]\nName=System X\n")
             entries, notices = scan_desktops([user, system])
             self.assertFalse(notices)
             self.assertEqual(len(entries), 1)
@@ -192,13 +212,14 @@ class DesktopTests(unittest.TestCase):
 
     def test_deduplicate_apt_desktop(self):
         application = Application(
-            "apt:editor", "editor", "APT", package_name="editor",
+            "apt:editor",
+            "editor",
+            "APT",
+            package_name="editor",
             system_package=True,
         )
         entry = desktop()
-        merged = merge_applications(
-            [application], [entry], {entry.path: ["editor"]}
-        )
+        merged = merge_applications([application], [entry], {entry.path: ["editor"]})
         self.assertEqual(len(merged), 1)
         self.assertEqual(merged[0].name, "Editor")
         self.assertTrue(merged[0].desktop_application)
@@ -211,13 +232,12 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(len(merge_applications(applications, [], {})), 2)
 
     def test_multiple_launchers_one_package(self):
-        application = Application(
-            "apt:suite", "suite", "APT", package_name="suite"
-        )
+        application = Application("apt:suite", "suite", "APT", package_name="suite")
         first = desktop("/usr/share/applications/first.desktop")
         second = desktop("/usr/share/applications/second.desktop")
         result = merge_applications(
-            [application], [first, second],
+            [application],
+            [first, second],
             {first.path: ["suite"], second.path: ["suite"]},
         )
         self.assertEqual(len(result), 1)
@@ -233,9 +253,11 @@ class AppImageTests(unittest.TestCase):
     def test_discovery_and_plan(self):
         with tempfile.TemporaryDirectory() as directory:
             path = self.create_image(directory)
-            application = AppImageBackend(
-                FakeRunner(), [Path(directory)]
-            ).discover().applications[0]
+            application = (
+                AppImageBackend(FakeRunner(), [Path(directory)])
+                .discover()
+                .applications[0]
+            )
             self.assertEqual(application.install_location, str(path))
             plan = OperationService(FakeRunner()).plan(application)
             self.assertIsNotNone(plan.local_delete)
@@ -244,26 +266,24 @@ class AppImageTests(unittest.TestCase):
     def test_fake_extension_ignored(self):
         with tempfile.TemporaryDirectory() as directory:
             (Path(directory) / "Fake.AppImage").write_text("not an AppImage")
-            result = AppImageBackend(
-                FakeRunner(), [Path(directory)]
-            ).discover()
+            result = AppImageBackend(FakeRunner(), [Path(directory)]).discover()
             self.assertEqual(result.applications, [])
 
     def test_symlink_ignored(self):
         with tempfile.TemporaryDirectory() as directory:
             path = self.create_image(directory)
             (Path(directory) / "Link.AppImage").symlink_to(path)
-            result = AppImageBackend(
-                FakeRunner(), [Path(directory)]
-            ).discover()
+            result = AppImageBackend(FakeRunner(), [Path(directory)]).discover()
             self.assertEqual(len(result.applications), 1)
 
     def test_changed_file_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             path = self.create_image(directory)
-            application = AppImageBackend(
-                FakeRunner(), [Path(directory)]
-            ).discover().applications[0]
+            application = (
+                AppImageBackend(FakeRunner(), [Path(directory)])
+                .discover()
+                .applications[0]
+            )
             plan = OperationService(FakeRunner()).plan(application)
             path.write_bytes(path.read_bytes() + b"changed")
             with self.assertRaises(PermissionError):
@@ -272,9 +292,11 @@ class AppImageTests(unittest.TestCase):
     def test_temporary_file_removal_only(self):
         with tempfile.TemporaryDirectory() as directory:
             path = self.create_image(directory)
-            application = AppImageBackend(
-                FakeRunner(), [Path(directory)]
-            ).discover().applications[0]
+            application = (
+                AppImageBackend(FakeRunner(), [Path(directory)])
+                .discover()
+                .applications[0]
+            )
             service = OperationService(FakeRunner())
             plan = service.plan(application)
             self.assertEqual(service.execute(plan, lambda _: None), 0)
@@ -298,7 +320,9 @@ class OperationTests(unittest.TestCase):
 
     def test_flatpak_command(self):
         application = Application(
-            "flatpak:test", "Test", "Flatpak",
+            "flatpak:test",
+            "Test",
+            "Flatpak",
             package_name="org.example.App",
             can_uninstall=True,
             metadata={
@@ -307,74 +331,131 @@ class OperationTests(unittest.TestCase):
             },
         )
         plan = OperationService(FakeRunner()).plan(application)
-        self.assertEqual(plan.argv, [
-            "/usr/bin/flatpak", "--user", "uninstall",
-            "--noninteractive", "--assumeyes", "--no-related",
-            "app/org.example.App/x86_64/stable",
-        ])
+        self.assertEqual(
+            plan.argv,
+            [
+                "/usr/bin/flatpak",
+                "--user",
+                "uninstall",
+                "--noninteractive",
+                "--assumeyes",
+                "--no-related",
+                "app/org.example.App/x86_64/stable",
+            ],
+        )
         self.assertNotIn("--delete-data", plan.argv)
 
     def test_snap_command(self):
         application = Application(
-            "snap:editor", "Editor", "Snap",
-            package_name="editor", can_uninstall=True,
+            "snap:editor",
+            "Editor",
+            "Snap",
+            package_name="editor",
+            can_uninstall=True,
         )
         plan = OperationService(FakeRunner()).plan(application)
-        self.assertEqual(plan.argv, [
-            "/usr/bin/pkexec", "/usr/bin/snap", "remove", "editor"
-        ])
+        self.assertEqual(
+            plan.argv, ["/usr/bin/pkexec", "/usr/bin/snap", "remove", "editor"]
+        )
         self.assertNotIn("--purge", plan.argv)
 
     def test_apt_update_command(self):
         application = Application(
-            "apt:editor", "Editor", "APT", package_name="editor",
-            version="1", can_update=True, update_version="2",
+            "apt:editor",
+            "Editor",
+            "APT",
+            package_name="editor",
+            version="1",
+            can_update=True,
+            update_version="2",
         )
         plan = OperationService(FakeRunner()).update_plan(application)
-        self.assertEqual(plan.argv, [
-            "/usr/bin/pkexec", "/usr/bin/apt-get", "install",
-            "--only-upgrade", "--no-remove", "--assume-yes", "editor",
-        ])
+        self.assertEqual(
+            plan.argv,
+            [
+                "/usr/bin/pkexec",
+                "/usr/bin/apt-get",
+                "install",
+                "--only-upgrade",
+                "--no-remove",
+                "--assume-yes",
+                "editor",
+            ],
+        )
 
     def test_flatpak_update_command(self):
         application = Application(
-            "flatpak:test", "Test", "Flatpak", package_name="org.example.App",
+            "flatpak:test",
+            "Test",
+            "Flatpak",
+            package_name="org.example.App",
             can_update=True,
             metadata={"scope": "user", "ref": "app/org.example.App/x86_64/stable"},
         )
         plan = OperationService(FakeRunner()).update_plan(application)
-        self.assertEqual(plan.argv, [
-            "/usr/bin/flatpak", "--user", "update", "--noninteractive",
-            "--assumeyes", "app/org.example.App/x86_64/stable",
-        ])
+        self.assertEqual(
+            plan.argv,
+            [
+                "/usr/bin/flatpak",
+                "--user",
+                "update",
+                "--noninteractive",
+                "--assumeyes",
+                "app/org.example.App/x86_64/stable",
+            ],
+        )
 
     def test_snap_update_command(self):
         application = Application(
-            "snap:editor", "Editor", "Snap", package_name="editor",
+            "snap:editor",
+            "Editor",
+            "Snap",
+            package_name="editor",
             can_update=True,
         )
         plan = OperationService(FakeRunner()).update_plan(application)
-        self.assertEqual(plan.argv, [
-            "/usr/bin/pkexec", "/usr/bin/snap", "refresh", "editor",
-        ])
+        self.assertEqual(
+            plan.argv,
+            [
+                "/usr/bin/pkexec",
+                "/usr/bin/snap",
+                "refresh",
+                "editor",
+            ],
+        )
 
     def test_apt_reinstall_command_and_source(self):
         application = Application(
-            "apt:editor", "Editor", "APT", package_name="editor",
+            "apt:editor",
+            "Editor",
+            "APT",
+            package_name="editor",
         )
         service = OperationService(FakeRunner())
         self.assertEqual(service.reinstall_sources(application), ["APT repositories"])
         plan = service.reinstall_plan(application, "APT repositories")
-        self.assertEqual(plan.argv, [
-            "/usr/bin/pkexec", "/usr/bin/apt-get", "install", "--reinstall",
-            "--no-remove", "--assume-yes", "editor",
-        ])
+        self.assertEqual(
+            plan.argv,
+            [
+                "/usr/bin/pkexec",
+                "/usr/bin/apt-get",
+                "install",
+                "--reinstall",
+                "--no-remove",
+                "--assume-yes",
+                "editor",
+            ],
+        )
 
     def test_flatpak_reinstall_command_and_source(self):
         application = Application(
-            "flatpak:test", "Test", "Flatpak", package_name="org.example.App",
+            "flatpak:test",
+            "Test",
+            "Flatpak",
+            package_name="org.example.App",
             metadata={
-                "scope": "user", "origin": "flathub",
+                "scope": "user",
+                "origin": "flathub",
                 "ref": "app/org.example.App/x86_64/stable",
             },
         )
@@ -382,46 +463,73 @@ class OperationTests(unittest.TestCase):
         source = "Flatpak remote: flathub"
         self.assertEqual(service.reinstall_sources(application), [source])
         plan = service.reinstall_plan(application, source)
-        self.assertEqual(plan.argv, [
-            "/usr/bin/flatpak", "--user", "install", "--reinstall",
-            "--noninteractive", "--assumeyes", "flathub",
-            "app/org.example.App/x86_64/stable",
-        ])
+        self.assertEqual(
+            plan.argv,
+            [
+                "/usr/bin/flatpak",
+                "--user",
+                "install",
+                "--reinstall",
+                "--noninteractive",
+                "--assumeyes",
+                "flathub",
+                "app/org.example.App/x86_64/stable",
+            ],
+        )
 
     def test_snap_reinstall_command_and_source(self):
         application = Application(
-            "snap:editor", "Editor", "Snap", package_name="editor",
+            "snap:editor",
+            "Editor",
+            "Snap",
+            package_name="editor",
         )
         service = OperationService(FakeRunner())
         self.assertEqual(service.reinstall_sources(application), ["Snap Store"])
         plan = service.reinstall_plan(application, "Snap Store")
-        self.assertEqual(plan.argv, [
-            "/usr/bin/pkexec", "/usr/bin/snap", "refresh", "--amend", "editor",
-        ])
+        self.assertEqual(
+            plan.argv,
+            [
+                "/usr/bin/pkexec",
+                "/usr/bin/snap",
+                "refresh",
+                "--amend",
+                "editor",
+            ],
+        )
 
     def test_invalid_snap(self):
         application = Application(
-            "snap:bad", "Bad", "Snap",
-            package_name="--purge", can_uninstall=True,
+            "snap:bad",
+            "Bad",
+            "Snap",
+            package_name="--purge",
+            can_uninstall=True,
         )
         with self.assertRaises(ValueError):
             OperationService(FakeRunner()).plan(application)
 
     def test_apt_command(self):
         application = Application(
-            "apt:editor", "Editor", "APT",
-            package_name="editor", can_uninstall=True,
+            "apt:editor",
+            "Editor",
+            "APT",
+            package_name="editor",
+            can_uninstall=True,
         )
-        runner = FakeRunner(json.dumps({
-            "version": "1", "digest": "a" * 64
-        }))
+        runner = FakeRunner(json.dumps({"version": "1", "digest": "a" * 64}))
         with patch("installed_software.operations.check_helper_installation"):
             plan = OperationService(runner).plan(application)
-        self.assertEqual(plan.argv, [
-            "/usr/bin/pkexec",
-            "/usr/lib/installed-software/apt_helper.py",
-            "--apply", "editor", "a" * 64,
-        ])
+        self.assertEqual(
+            plan.argv,
+            [
+                "/usr/bin/pkexec",
+                "/usr/lib/installed-software/apt_helper.py",
+                "--apply",
+                "editor",
+                "a" * 64,
+            ],
+        )
         self.assertEqual(len(runner.commands), 1)
 
     def test_unknown_removal_refused(self):
@@ -440,8 +548,7 @@ class OperationTests(unittest.TestCase):
 
     def test_search(self):
         application = Application(
-            "x", "Visual Studio Code", "APT",
-            package_name="code", publisher="Microsoft"
+            "x", "Visual Studio Code", "APT", package_name="code", publisher="Microsoft"
         )
         self.assertTrue(fuzzy_match("vsc", application))
         self.assertTrue(fuzzy_match("microsoft apt", application))

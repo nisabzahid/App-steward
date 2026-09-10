@@ -6,8 +6,9 @@ import threading
 from pathlib import Path
 
 import gi
+
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Gio, GLib, GObject, Pango
+from gi.repository import Gio, GLib, GObject, Gtk, Pango
 
 from .discovery import DiscoveryService
 from .model import Application, fuzzy_match, human_size
@@ -240,7 +241,10 @@ class ManagerWindow(Gtk.ApplicationWindow):
 
             if source == "Other":
                 if application.installation_type in {
-                    "APT", "Flatpak", "Snap", "AppImage"
+                    "APT",
+                    "Flatpak",
+                    "Snap",
+                    "AppImage",
                 }:
                     continue
             elif source != "All" and source != application.installation_type:
@@ -251,18 +255,20 @@ class ManagerWindow(Gtk.ApplicationWindow):
 
         sort = self.sort.get_selected()
         if sort == 2:
-            selected.sort(key=lambda item: (
-                -(item.size if item.size is not None else -1),
-                item.name.casefold(),
-            ))
+            selected.sort(
+                key=lambda item: (
+                    -(item.size if item.size is not None else -1),
+                    item.name.casefold(),
+                )
+            )
         elif sort == 3:
-            selected.sort(key=lambda item: (
-                item.installation_type, item.name.casefold()
-            ))
+            selected.sort(
+                key=lambda item: (item.installation_type, item.name.casefold())
+            )
         elif sort == 4:
-            selected.sort(key=lambda item: (
-                item.version.casefold(), item.name.casefold()
-            ))
+            selected.sort(
+                key=lambda item: (item.version.casefold(), item.name.casefold())
+            )
         else:
             selected.sort(
                 key=lambda item: item.name.casefold(),
@@ -270,13 +276,15 @@ class ManagerWindow(Gtk.ApplicationWindow):
             )
 
         self.store.splice(
-            0, self.store.get_n_items(),
+            0,
+            self.store.get_n_items(),
             [RowObject(application) for application in selected],
         )
         if not self.busy:
             timestamp = (
                 self.last_refresh.strftime("%H:%M:%S %Z")
-                if self.last_refresh else "not yet"
+                if self.last_refresh
+                else "not yet"
             )
             self.status.set_text(
                 f"{len(selected)} shown / {len(self.applications)} discovered · "
@@ -349,8 +357,11 @@ class ManagerWindow(Gtk.ApplicationWindow):
 
     def text_window(self, title: str, text: str):
         window = Gtk.Window(
-            title=title, transient_for=self, modal=True,
-            default_width=740, default_height=500,
+            title=title,
+            transient_for=self,
+            modal=True,
+            default_width=740,
+            default_height=500,
         )
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         for side in ("top", "bottom", "start", "end"):
@@ -374,9 +385,14 @@ class ManagerWindow(Gtk.ApplicationWindow):
     def show_diagnostics(self):
         self.message(
             "Discovery diagnostics",
-            "\n\n".join(self.notices)
-            if self.notices else
-            "All available discovery backends completed without reported errors.",
+            (
+                "\n\n".join(self.notices)
+                if self.notices
+                else (
+                    "All available discovery backends completed without "
+                    "reported errors."
+                )
+            ),
         )
 
     def show_details(self, application: Application):
@@ -438,8 +454,11 @@ class ManagerWindow(Gtk.ApplicationWindow):
         if not sources or self.busy:
             return
         window = Gtk.Window(
-            title=f"Reinstall {application.name}", transient_for=self, modal=True,
-            default_width=560, default_height=240,
+            title=f"Reinstall {application.name}",
+            transient_for=self,
+            modal=True,
+            default_width=560,
+            default_height=240,
         )
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
         for side in ("top", "bottom", "start", "end"):
@@ -477,9 +496,7 @@ class ManagerWindow(Gtk.ApplicationWindow):
         if not application.desktop_files:
             return
         try:
-            desktop = Gio.DesktopAppInfo.new_from_filename(
-                application.desktop_files[0]
-            )
+            desktop = Gio.DesktopAppInfo.new_from_filename(application.desktop_files[0])
             if desktop is None:
                 raise RuntimeError("Desktop launcher is no longer valid.")
             desktop.launch([], self.get_display().get_app_launch_context())
@@ -493,17 +510,23 @@ class ManagerWindow(Gtk.ApplicationWindow):
 
     def confirm_removal_request(self, application, details_window):
         window = Gtk.Window(
-            title=f"Uninstall {application.name}?", transient_for=self, modal=True,
-            default_width=520, default_height=220,
+            title=f"Uninstall {application.name}?",
+            transient_for=self,
+            modal=True,
+            default_width=520,
+            default_height=220,
         )
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
         for side in ("top", "bottom", "start", "end"):
             getattr(box, f"set_margin_{side}")(18)
         window.set_child(box)
-        box.append(wrapped_label(
-            f"Are you sure you want to uninstall {application.name}? "
-            "The application will be removed only after you review the operation plan."
-        ))
+        box.append(
+            wrapped_label(
+                f"Are you sure you want to uninstall {application.name}? "
+                "The application will be removed only after you review the "
+                "operation plan."
+            )
+        )
         actions = Gtk.Box(spacing=10)
         cancel = button("Cancel", lambda _: window.close())
         actions.append(cancel)
@@ -547,8 +570,11 @@ class ManagerWindow(Gtk.ApplicationWindow):
 
     def confirm_update(self, application, plan):
         window = Gtk.Window(
-            title=plan.title, transient_for=self, modal=True,
-            default_width=680, default_height=450,
+            title=plan.title,
+            transient_for=self,
+            modal=True,
+            default_width=680,
+            default_height=450,
         )
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
         for side in ("top", "bottom", "start", "end"):
@@ -577,8 +603,11 @@ class ManagerWindow(Gtk.ApplicationWindow):
 
     def confirm_reinstall(self, application, plan):
         window = Gtk.Window(
-            title=plan.title, transient_for=self, modal=True,
-            default_width=680, default_height=450,
+            title=plan.title,
+            transient_for=self,
+            modal=True,
+            default_width=680,
+            default_height=450,
         )
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
         for side in ("top", "bottom", "start", "end"):
@@ -609,8 +638,11 @@ class ManagerWindow(Gtk.ApplicationWindow):
 
     def confirm_removal(self, application, plan):
         window = Gtk.Window(
-            title=plan.title, transient_for=self, modal=True,
-            default_width=680, default_height=450,
+            title=plan.title,
+            transient_for=self,
+            modal=True,
+            default_width=680,
+            default_height=450,
         )
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
         for side in ("top", "bottom", "start", "end"):
@@ -644,7 +676,8 @@ class ManagerWindow(Gtk.ApplicationWindow):
     def execute_operation(self, application, plan, action, completed_label):
         self.set_busy(True, f"{action} {application.name}…")
         window, box, view = self.text_window(
-            f"{action} {application.name}", "Starting package operation…\n",
+            f"{action} {application.name}",
+            "Starting package operation…\n",
         )
         window.connect("close-request", lambda *_: self.busy)
         buffer = view.get_buffer()

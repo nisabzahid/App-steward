@@ -176,3 +176,37 @@ APT removal runs through a root-owned helper and refuses protected packages.
 /usr/bin/python3 -m unittest discover -s tests -v
 /usr/bin/python3 -m compileall -q installed_software privileged tests
 ```
+
+## Code quality and CI
+
+Development tools are pinned in `requirements-dev.txt`:
+
+- Black formats Python code.
+- isort keeps imports ordered using Black-compatible rules.
+- Flake8 checks Python style and common errors.
+- pytest is available for future test migration, while the current suite uses
+    the standard-library unittest runner.
+
+Run the local quality checks with:
+
+```bash
+python3 -m pip install -r requirements-dev.txt
+isort --check-only .
+black --check .
+flake8 .
+/usr/bin/python3 -m unittest discover -s tests -v
+/usr/bin/python3 -m compileall -q installed_software privileged tests
+sh scripts/build-deb.sh
+```
+
+GitHub Actions runs the same checks for pushes to `main` and pull requests.
+The workflow uses GitHub's free hosted Ubuntu runner and does not require a
+paid CI service or project secrets.
+
+Suggested next improvements:
+
+- Add integration tests around discovery using recorded command fixtures.
+- Add a release workflow that publishes the `.deb` as a GitHub release asset.
+- Add dependency and workflow update automation with Dependabot.
+- Add UI smoke tests for confirmation dialogs and source selection.
+- Add package metadata checks for desktop files and icon installation.

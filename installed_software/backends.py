@@ -49,7 +49,7 @@ def parse_size(text: str) -> int | None:
     powers = {"K": 1, "M": 2, "G": 3, "T": 4}
     power = powers.get(suffix[0], 0)
     base = 1024 if "I" in suffix else 1000
-    return int(float(amount) * base ** power)
+    return int(float(amount) * base**power)
 
 
 def parse_dpkg(text: str) -> list[Application]:
@@ -62,8 +62,16 @@ def parse_dpkg(text: str) -> list[Application]:
             LOG.warning("Ignoring malformed DPKG record")
             continue
         (
-            package, version, architecture, size, maintainer, status,
-            essential, priority, section, description,
+            package,
+            version,
+            architecture,
+            size,
+            maintainer,
+            status,
+            essential,
+            priority,
+            section,
+            description,
         ) = fields
 
         if len(status) < 2 or status[1] != "i":
@@ -74,33 +82,35 @@ def parse_dpkg(text: str) -> list[Application]:
         except ValueError:
             installed_size = None
 
-        applications.append(Application(
-            id=f"apt:{package}",
-            name=package,
-            installation_type="APT",
-            package_name=package,
-            version=version,
-            description=description.replace("\n .\n", "\n\n"),
-            architecture=architecture,
-            size=installed_size,
-            publisher=maintainer,
-            source="DPKG database; repository not determined",
-            system_package=True,
-            can_uninstall=(
-                essential != "yes"
-                and priority not in {"required", "important"}
-                and status.strip() == "ii"
-            ),
-            metadata={
-                "status": status,
-                "essential": essential == "yes",
-                "priority": priority,
-                "section": section,
-                "automatic": None,
-                "origins": [],
-                "management": "APT / DPKG",
-            },
-        ))
+        applications.append(
+            Application(
+                id=f"apt:{package}",
+                name=package,
+                installation_type="APT",
+                package_name=package,
+                version=version,
+                description=description.replace("\n .\n", "\n\n"),
+                architecture=architecture,
+                size=installed_size,
+                publisher=maintainer,
+                source="DPKG database; repository not determined",
+                system_package=True,
+                can_uninstall=(
+                    essential != "yes"
+                    and priority not in {"required", "important"}
+                    and status.strip() == "ii"
+                ),
+                metadata={
+                    "status": status,
+                    "essential": essential == "yes",
+                    "priority": priority,
+                    "section": section,
+                    "automatic": None,
+                    "origins": [],
+                    "management": "APT / DPKG",
+                },
+            )
+        )
     return applications
 
 
@@ -114,11 +124,13 @@ class AptBackend(PackageBackend):
         if not self.is_available():
             return DiscoveryResult(notices=["APT/DPKG: dpkg-query is unavailable."])
 
-        data = self.runner.run([
-            self.runner.executable("dpkg-query"),
-            "--show",
-            f"--showformat={DPKG_FORMAT}",
-        ])
+        data = self.runner.run(
+            [
+                self.runner.executable("dpkg-query"),
+                "--show",
+                f"--showformat={DPKG_FORMAT}",
+            ]
+        )
         applications = parse_dpkg(data)
         notices = []
 
@@ -137,19 +149,29 @@ class AptBackend(PackageBackend):
                         application.can_update = True
                         application.update_version = candidate.version
                     application.metadata["automatic"] = package.is_auto_installed
-                    origins = sorted({
-                        " / ".join(filter(None, (
-                            origin.origin, origin.label, origin.archive,
-                            origin.component, origin.site,
-                        )))
-                        for origin in version.origins
-                        if origin.site or origin.origin or origin.label
-                    })
+                    origins = sorted(
+                        {
+                            " / ".join(
+                                filter(
+                                    None,
+                                    (
+                                        origin.origin,
+                                        origin.label,
+                                        origin.archive,
+                                        origin.component,
+                                        origin.site,
+                                    ),
+                                )
+                            )
+                            for origin in version.origins
+                            if origin.site or origin.origin or origin.label
+                        }
+                    )
                     application.metadata["origins"] = origins
                     application.source = (
                         "; ".join(origins)
-                        if origins else
-                        "DPKG; no matching repository in current APT indexes"
+                        if origins
+                        else "DPKG; no matching repository in current APT indexes"
                     )
                 except (KeyError, AttributeError):
                     continue
@@ -165,9 +187,7 @@ class AptBackend(PackageBackend):
 def flatpak_installations() -> list[tuple[str, list[str], str]]:
     """Include default user/system and configured named system installations."""
     home = Path.home()
-    user_data = Path(os.environ.get(
-        "XDG_DATA_HOME", str(home / ".local/share")
-    ))
+    user_data = Path(os.environ.get("XDG_DATA_HOME", str(home / ".local/share")))
     installations = [
         ("user", ["--user"], str(user_data / "flatpak")),
         ("system", ["--system"], "/var/lib/flatpak"),
@@ -184,26 +204,23 @@ def flatpak_installations() -> list[tuple[str, list[str], str]]:
                     if not match:
                         continue
                     name = match.group(1)
-                    if (
-                        name in seen
-                        or not re.fullmatch(r"[A-Za-z0-9_.-]+", name)
-                    ):
+                    if name in seen or not re.fullmatch(r"[A-Za-z0-9_.-]+", name):
                         continue
                     seen.add(name)
                     location = parser.get(section, "Path", fallback="")
-                    installations.append((
-                        f"system:{name}",
-                        [f"--installation={name}"],
-                        location,
-                    ))
+                    installations.append(
+                        (
+                            f"system:{name}",
+                            [f"--installation={name}"],
+                            location,
+                        )
+                    )
             except (OSError, configparser.Error):
                 LOG.warning("Cannot parse Flatpak installation configuration")
     return installations
 
 
-def parse_flatpak(
-    text: str, scope: str, location: str
-) -> list[Application]:
+def parse_flatpak(text: str, scope: str, location: str) -> list[Application]:
     applications = []
     for line in text.splitlines():
         fields = line.split("\t")
@@ -214,27 +231,29 @@ def parse_flatpak(
         app_id, name, version, arch, branch, runtime, origin, size, ref = fields
         if not ref.startswith("app/"):
             continue
-        applications.append(Application(
-            id=f"flatpak:{scope}:{ref}",
-            name=name or app_id,
-            installation_type="Flatpak",
-            package_name=app_id,
-            version=version,
-            architecture=arch,
-            size=parse_size(size),
-            source=f"{origin} ({scope})",
-            install_location=location,
-            desktop_application=True,
-            can_uninstall=True,
-            can_update=True,
-            metadata={
-                "scope": scope,
-                "ref": ref,
-                "runtime": runtime,
-                "origin": origin,
-                "branch": branch,
-            },
-        ))
+        applications.append(
+            Application(
+                id=f"flatpak:{scope}:{ref}",
+                name=name or app_id,
+                installation_type="Flatpak",
+                package_name=app_id,
+                version=version,
+                architecture=arch,
+                size=parse_size(size),
+                source=f"{origin} ({scope})",
+                install_location=location,
+                desktop_application=True,
+                can_uninstall=True,
+                can_update=True,
+                metadata={
+                    "scope": scope,
+                    "ref": ref,
+                    "runtime": runtime,
+                    "origin": origin,
+                    "branch": branch,
+                },
+            )
+        )
     return applications
 
 
@@ -250,17 +269,17 @@ class FlatpakBackend(PackageBackend):
         result = DiscoveryResult()
         for scope, flags, location in flatpak_installations():
             try:
-                data = self.runner.run([
-                    self.runner.executable("flatpak"),
-                    *flags,
-                    "list",
-                    "--app",
-                    "--columns=application,name,version,arch,branch,"
-                    "runtime,origin,size,ref",
-                ])
-                result.applications.extend(
-                    parse_flatpak(data, scope, location)
+                data = self.runner.run(
+                    [
+                        self.runner.executable("flatpak"),
+                        *flags,
+                        "list",
+                        "--app",
+                        "--columns=application,name,version,arch,branch,"
+                        "runtime,origin,size,ref",
+                    ]
                 )
+                result.applications.extend(parse_flatpak(data, scope, location))
             except Exception as error:
                 result.notices.append(f"Flatpak ({scope}): {error}")
         return result
@@ -280,25 +299,27 @@ def parse_snap(text: str) -> list[Application]:
         except OSError:
             size = None
 
-        applications.append(Application(
-            id=f"snap:{name}",
-            name=name,
-            installation_type="Snap",
-            package_name=name,
-            version=version,
-            publisher=publisher,
-            source=f"Snap Store ({channel})",
-            size=size,
-            install_location=str(path),
-            desktop_application=False,
-            can_uninstall=True,
-            can_update=True,
-            metadata={
-                "revision": revision,
-                "channel": channel,
-                "notes": notes,
-            },
-        ))
+        applications.append(
+            Application(
+                id=f"snap:{name}",
+                name=name,
+                installation_type="Snap",
+                package_name=name,
+                version=version,
+                publisher=publisher,
+                source=f"Snap Store ({channel})",
+                size=size,
+                install_location=str(path),
+                desktop_application=False,
+                can_uninstall=True,
+                can_update=True,
+                metadata={
+                    "revision": revision,
+                    "channel": channel,
+                    "notes": notes,
+                },
+            )
+        )
     return applications
 
 
@@ -311,9 +332,7 @@ class SnapBackend(PackageBackend):
     def discover(self) -> DiscoveryResult:
         if not self.is_available():
             return DiscoveryResult(notices=["Snap is not installed."])
-        text = self.runner.run([
-            self.runner.executable("snap"), "list"
-        ], timeout=45)
+        text = self.runner.run([self.runner.executable("snap"), "list"], timeout=45)
         return DiscoveryResult(parse_snap(text))
 
 
@@ -324,9 +343,7 @@ def configured_appimage_roots() -> list[Path]:
         home / "AppImages",
         home / "Downloads",
     ]
-    config_home = Path(os.environ.get(
-        "XDG_CONFIG_HOME", str(home / ".config")
-    ))
+    config_home = Path(os.environ.get("XDG_CONFIG_HOME", str(home / ".config")))
     filename = config_home / "installed-software/config.ini"
     parser = configparser.ConfigParser(interpolation=None)
     try:
@@ -335,7 +352,8 @@ def configured_appimage_roots() -> list[Path]:
         if value.strip():
             return [
                 Path(line.strip()).expanduser().absolute()
-                for line in value.splitlines() if line.strip()
+                for line in value.splitlines()
+                if line.strip()
             ]
     except (OSError, configparser.Error):
         LOG.warning("Invalid AppImage configuration; using defaults")
@@ -352,8 +370,12 @@ def appimage_signature(header: bytes) -> bool:
 
 def fingerprint(info: os.stat_result) -> list[int]:
     return [
-        info.st_dev, info.st_ino, info.st_uid,
-        info.st_size, info.st_mtime_ns, info.st_ctime_ns,
+        info.st_dev,
+        info.st_ino,
+        info.st_uid,
+        info.st_size,
+        info.st_mtime_ns,
+        info.st_ctime_ns,
     ]
 
 
@@ -380,13 +402,12 @@ class AppImageBackend(PackageBackend):
                 result.notices.append("AppImage: refusing to scan filesystem root.")
                 continue
             try:
-                for current, directories, filenames in os.walk(
-                    root, followlinks=False
-                ):
+                for current, directories, filenames in os.walk(root, followlinks=False):
                     current_path = Path(current)
                     depth = len(current_path.relative_to(root).parts)
                     directories[:] = [
-                        name for name in sorted(directories)
+                        name
+                        for name in sorted(directories)
                         if not name.startswith(".")
                         and not (current_path / name).is_symlink()
                     ]
@@ -421,32 +442,33 @@ class AppImageBackend(PackageBackend):
                                 and parent.st_uid == os.getuid()
                                 and not parent.st_mode & 0o022
                             )
-                            result.applications.append(Application(
-                                id=f"appimage:{path}",
-                                name=path.stem,
-                                installation_type="AppImage",
-                                package_name=name,
-                                size=info.st_size,
-                                install_location=str(path),
-                                source="Portable AppImage file",
-                                desktop_application=True,
-                                can_uninstall=removable,
-                                metadata={
-                                    "root": str(root),
-                                    "fingerprint": fingerprint(info),
-                                    "parent_identity": [
-                                        parent.st_dev, parent.st_ino
-                                    ],
-                                    "version_note": (
-                                        "Version cannot be determined reliably "
-                                        "without inspecting application contents."
-                                    ),
-                                },
-                            ))
-                        except OSError:
-                            result.notices.append(
-                                f"AppImage: unable to inspect {path}"
+                            result.applications.append(
+                                Application(
+                                    id=f"appimage:{path}",
+                                    name=path.stem,
+                                    installation_type="AppImage",
+                                    package_name=name,
+                                    size=info.st_size,
+                                    install_location=str(path),
+                                    source="Portable AppImage file",
+                                    desktop_application=True,
+                                    can_uninstall=removable,
+                                    metadata={
+                                        "root": str(root),
+                                        "fingerprint": fingerprint(info),
+                                        "parent_identity": [
+                                            parent.st_dev,
+                                            parent.st_ino,
+                                        ],
+                                        "version_note": (
+                                            "Version cannot be determined reliably "
+                                            "without inspecting application contents."
+                                        ),
+                                    },
+                                )
                             )
+                        except OSError:
+                            result.notices.append(f"AppImage: unable to inspect {path}")
             except OSError as error:
                 result.notices.append(f"AppImage ({root}): {error}")
         return result
